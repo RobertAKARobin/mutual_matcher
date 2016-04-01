@@ -1,13 +1,7 @@
 var people = {};
 var groups = [];
 
-require("fs").readFile("./data.csv", "utf8", function(err, raw){
-  var output = [];
-  raw.trim().split(/[\n\r]/).forEach(function(line){
-    output.push(line.trim().split(/\s*,\s*/));
-  });
-  getChoices(output);
-});
+require("./loadData")(getChoices);
 
 function getChoices(csv){
   var names = {};
@@ -26,6 +20,7 @@ function getChoices(csv){
       name: name,
       choices: (byChooser[name] || []),
       chosenBy: [],
+      mutuals: [],
       group: null
     }
   });
@@ -33,20 +28,39 @@ function getChoices(csv){
 }
 
 function getChosenBy(){
-  Object.keys(people).sort().forEach(function(name){
+  Object.keys(people).forEach(function(name){
     var person = people[name];
     person.choices.forEach(function(choice){
       people[choice].chosenBy.push(person.name);
     });
   });
-  rankPeople();
+  getMutuals();
 }
 
-function rankPeople(){
+function getMutuals(){
+  Object.keys(people).forEach(function(name){
+    var person = people[name];
+    person.choices.forEach(function(choice){
+      var choice = people[choice];
+      var isMutual = (choice.choices.indexOf(person.name) > -1);
+      var isNotLogged = (choice.mutuals.indexOf(person.name) < 0);
+      if(isMutual && isNotLogged){
+        choice.mutuals.push(person.name);
+        person.mutuals.push(choice.name);
+      }
+    });
+  });
+  rankPeopleByMutuals();
+}
+
+function rankPeopleByMutuals(){
   var rankedNames = Object.keys(people).sort(function(a, b){
-    return(people[b].chosenBy.length - people[a].chosenBy.length);
+    return(people[b].mutuals.length - people[a].mutuals.length);
   });
   rankedNames.forEach(function(name){
-    
+    var person = people[name];
+    person.mutuals.forEach(function(name){
+
+    });
   });
 }

@@ -1,0 +1,1 @@
+require("./loadData")(getChoices);
