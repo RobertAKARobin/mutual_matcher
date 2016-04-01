@@ -1,5 +1,21 @@
+var groupSize = 3;
+var dataFile  = "./data.csv";
 var h = require("helpers-js");
-require("./loadData")(function(csv, names){
+
+// Yup, just one big long script.
+
+require("fs").readFile(dataFile, "utf8", function(err, raw){
+
+  var csv = [];
+  var names = {};
+  raw.trim().split(/[\n\r]/).forEach(function(line){
+    var line = line.trim().split(/\s*,\s*/);
+    csv.push(line);
+    line.forEach(function(datum){
+      if(!names[datum]) names[datum] = true;
+    });
+  });
+
   var byChooser = {};
   h.forEach(csv, function(line){
     var chooser = line[0];
@@ -29,7 +45,6 @@ require("./loadData")(function(csv, names){
 
   var names       = Object.keys(names);
   var base        = names.length;
-  var groupSize   = 3;
   var combos      = Array(Math.pow(base, groupSize));
   h.forEach(groupSize, function(x, l){
     var i = 0;
@@ -85,10 +100,14 @@ require("./loadData")(function(csv, names){
     if(used.indexOf(name) < 0) remainder.push(name);
   });
 
+  console.log("*** Groups ***");
+
   h.forEach(final, function(group){
     console.log(group);
   });
 
-  console.log(remainder);
+  console.log("\n*** Unassigned ***");
+
+  console.log(remainder.join(", "));
 
 });
