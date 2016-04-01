@@ -1,32 +1,29 @@
 var h = require("./helpers");
 require("./loadData")(function(csv, names){
-  var byChooser = {};
-  h.forEach(csv, function(line){
-    var chooser = line[0];
-    var choices = [];
-    line.forEach(function(name){
-      if(name !== chooser) choices.push(name);
-    });
-    byChooser[chooser] = choices;
-  });
 
   var people = {};
   h.forEach(names, function(i, name){
     people[name] = {
       name: name,
-      choices: (byChooser[name] || []),
-      chosenBy: [],
-      mutuals: [],
-      group: null
+      choices: [],
+      didVote: false
     }
   });
 
-  h.forEach(people, function(person){
-    person.choices.forEach(function(choice){
-      people[choice].chosenBy.push(person.name);
+  // Calculate the "scores" for each person's choices
+  h.forEach(csv, function(line){
+    var chooser = people[line[0]];
+    var choices = {};
+    var numChoices = (line.length - 1);
+    chooser.didVote = true;
+    h.forEach(line.slice(0), function(name, index){
+      if(name !== chooser.name){
+        chooser.choices[name] = (numChoices - index);
+      }
     });
   });
 
+  // Calculate all possible combinations
   var names       = Object.keys(names);
   var base        = names.length;
   var groupSize   = 3;
@@ -45,48 +42,70 @@ require("./loadData")(function(csv, names){
     });
   });
 
+  // Make sure all groups have 3 people
   var groups = [];
   h.forEach(combos, function(combo){
-    if(combo.length === groupSize) groups.push({members: combo, score: 0});
+    if(combo.length === groupSize) groups.push({members: combo});
   });
 
+  // Calculate how "satisfied" each person is with that group
+  // Then calculate the net satisfaction for each group
   h.forEach(groups, function(group){
+    group.satisfaction = 0;
+    group.grumpyScore = 0;
     h.forEach(group.members, function(name){
-      h.forEach(group.members, function(otherName){
-        if(people[name].choices.indexOf(otherName) > -1){
-          group.score += 1;
-        }else{
-          group.score -= 1;
-        }
+      var person = people[name];
+      var personSatisfaction = 0;
+      h.forEach(group.members, function(choiceName){
+        personSatisfaction += (person.choices[choiceName] || 0);
       });
+      if(person.didVote && personSatisfaction < 1){
+        group.grumpyScore -= 1;
+      }
+      group.satisfaction += personSatisfaction;
     });
   });
 
   groups.sort(function(a, b){
-    return(b.score - a.score);
+    return(b.satisfaction - a.satisfaction);
   });
 
-  var used = [];
+  groups.sort(function(a, b){
+    return(b.grumpyScore - a.grumpyScore);
+  });
+
+  h.forEach(groups, function(group){
+    group.badScore = 0;
+    h.forEach(group.members, function(name){
+      var person = people[name];
+       group.badScore -= 1;
+    });
+  });
+
+  groups.sort(function(a, b){
+    return(b.priorityScore - a.priorityScore);
+  });
+
+  var usedPeople = [];
   var final = [];
   h.forEach(groups, function(group){
-    var memberString = group.members.sort().join(", ");
     var isDupe = false;
     h.forEach(group.members, function(name){
-      if(used.indexOf(name) > -1) isDupe = true;
+      if(usedPeople.indexOf(name) > -1) isDupe = true;
     });
     if(!isDupe){
-      used = used.concat(group.members);
-      final.push(memberString);
+      usedPeople = usedPeople.concat(group.members);
+      final.push(group);
     }
   });
 
   var remainder = [];
   h.forEach(names, function(name){
-    if(used.indexOf(name) < 0) remainder.push(name);
+    if(usedPeople.indexOf(name) < 0) remainder.push(name);
   });
 
   h.forEach(final, function(group){
-    console.log(group);
+    console.log(group.members);
   });
 
   console.log(remainder);
