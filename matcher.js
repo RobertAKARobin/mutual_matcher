@@ -2,47 +2,48 @@ var groupSize = 3;
 var dataFile  = "./data.csv";
 var h = require("helpers-js");
 
-// Yup, just one big long script.
+// Yup, just one big long script
 
 require("fs").readFile(dataFile, "utf8", function(err, raw){
 
+  // Parse the CSV, and record all of the names in it
   var csv = [];
   var names = {};
-  raw.trim().split(/[\n\r]/).forEach(function(line){
+  var allValues = [];
+  h.forEach(raw.trim().split(/[\n\r]/), function(line){
     var line = line.trim().split(/\s*,\s*/);
     csv.push(line);
-    line.forEach(function(datum){
+    allValues = allValues.concat(line);
+    h.forEach(line, function(datum){
       if(!names[datum]) names[datum] = true;
     });
   });
 
-  var byChooser = {};
-  h.forEach(csv, function(line){
-    var chooser = line[0];
-    var choices = [];
-    line.forEach(function(name){
-      if(name !== chooser) choices.push(name);
-    });
-    byChooser[chooser] = choices;
-  });
+  // Can use this to check for misspellings
+  // console.log(allValues.sort().join("\n\r"));
 
+  // Create a person object for each person mentioned in the CSV
   var people = {};
   h.forEach(names, function(i, name){
     people[name] = {
       name: name,
-      choices: (byChooser[name] || []),
-      chosenBy: [],
-      mutuals: [],
-      group: null
+      choices: {}
     }
   });
 
-  h.forEach(people, function(person){
-    person.choices.forEach(function(choice){
-      people[choice].chosenBy.push(person.name);
+  // The first item in each CSV line is the person who submitted the choices
+  // The other items in the line are their choices
+  h.forEach(csv, function(line){
+    var chooser = people[line[0]];
+    var choices = {};
+    h.forEach(line, function(choiceName){
+      if(chooser.name !== choiceName){
+        chooser.choices[choiceName] = true;
+      }
     });
   });
 
+  // Calculate all possible combinations
   var names       = Object.keys(names);
   var base        = names.length;
   var combos      = Array(Math.pow(base, groupSize));
@@ -60,41 +61,45 @@ require("fs").readFile(dataFile, "utf8", function(err, raw){
     });
   });
 
+  // Make sure all groups have N people
   var groups = [];
   h.forEach(combos, function(combo){
-    if(combo.length === groupSize) groups.push({members: combo, score: 0});
+    if(combo.length === groupSize){
+      groups.push({members: combo});
+    }
   });
 
+  // Calculate a "score" for each group based on how many times a member chose another member
   h.forEach(groups, function(group){
+    group.score = 0;
     h.forEach(group.members, function(name){
+      var person = people[name];
       h.forEach(group.members, function(otherName){
-        if(people[name].choices.indexOf(otherName) > -1){
-          group.score += 1;
-        }else{
-          group.score -= 1;
-        }
+        if(person.choices[otherName]) group.score += 1;
       });
     });
   });
 
+  // Sort by score
   groups.sort(function(a, b){
     return(b.score - a.score);
   });
 
+  // Strip duplicates
   var used = [];
   var final = [];
   h.forEach(groups, function(group){
-    var memberString = group.members.sort().join(", ");
     var isDupe = false;
     h.forEach(group.members, function(name){
       if(used.indexOf(name) > -1) isDupe = true;
     });
     if(!isDupe){
       used = used.concat(group.members);
-      final.push(memberString);
+      final.push(group);
     }
   });
 
+  // Find who's left over
   var remainder = [];
   h.forEach(names, function(name){
     if(used.indexOf(name) < 0) remainder.push(name);
@@ -103,7 +108,8 @@ require("fs").readFile(dataFile, "utf8", function(err, raw){
   console.log("*** Groups ***");
 
   h.forEach(final, function(group){
-    console.log(group);
+    // console.log(group.members.join(", "));
+    console.log(group)
   });
 
   console.log("\n*** Unassigned ***");
