@@ -1,9 +1,14 @@
 module.exports = function(doWhat){
   require("fs").readFile("./data.csv", "utf8", function(err, raw){
     var output = [];
+    var allPossible = {};
     raw.trim().split(/[\n\r]/).forEach(function(line){
-      output.push(line.trim().split(/\s*,\s*/));
+      var line = line.trim().split(/\s*,\s*/);
+      output.push(line);
+      line.forEach(function(datum){
+        if(!allPossible[datum]) allPossible[datum] = true;
+      });
     });
-    doWhat(output);
+    doWhat(output, allPossible);
   });
 }

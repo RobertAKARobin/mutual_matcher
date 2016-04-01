@@ -3,14 +3,12 @@ var groups = [];
 
 require("./loadData")(getChoices);
 
-function getChoices(csv){
-  var names = {};
+function getChoices(csv, names){
   var byChooser = {};
   csv.forEach(function(line){
     var chooser = line[0];
     var choices = [];
     line.forEach(function(name){
-      if(!names[name]) names[name] = true;
       if(name !== chooser) choices.push(name);
     });
     byChooser[chooser] = choices;
@@ -59,6 +57,7 @@ function rankPeopleByMutuals(){
   });
   rankedNames.forEach(function(name){
     var person = people[name];
+    console.log(name)
     person.mutuals.forEach(function(name){
 
     });
