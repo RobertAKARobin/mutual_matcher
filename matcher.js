@@ -1,4 +1,4 @@
-var h = require("./helpers");
+var h = require("helpers-js");
 require("./loadData")(function(csv, names){
   var byChooser = {};
   h.forEach(csv, function(line){
